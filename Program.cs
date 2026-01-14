@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
-using System.Linq; // Importante para listas e aleatoriedade
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using OpenCvSharp;
@@ -30,7 +30,7 @@ namespace BotBallXPit
 
         static void Main(string[] args)
         {
-            Console.WriteLine("=== BOT BALL X PIT - V3 (Seleção de Personagens) ===");
+            Console.WriteLine("=== BOT BALL X PIT - V4 (Estável) ===");
             Console.WriteLine($"Diretório: {BaseDir}");
 
             while (true)
@@ -52,42 +52,28 @@ namespace BotBallXPit
             // ==============================================================================
             // PASSO 1: COLHEITA
             // ==============================================================================
-
             // Tenta localizar a imagem (sem clicar ainda!)
             Point locColher = LocalizarImagem("botoes/botao_colher.png", 0.7);
 
-            // Se a localização for diferente de Empty (0,0), significa que achou
             if (locColher != Point.Empty)
             {
                 Console.WriteLine("--- COLHEITA DETECTADA ---");
-                Console.WriteLine($"Coordenadas: {locColher}");
-
-                // Agora sim iniciamos a sequência manual usando a coordenada que já temos
-
                 Console.WriteLine(">> Clique 1 (Abrir)...");
                 Clicar(locColher.X, locColher.Y);
-                Thread.Sleep(3000); // Espera animação
+                Thread.Sleep(3000);
 
-                // Como o botão de colher fica no mesmo lugar para "lançar", usamos a mesma coord
                 Console.WriteLine(">> Clique 2 (Lançar)...");
                 Clicar(locColher.X, locColher.Y);
                 Thread.Sleep(3000);
 
-                Console.WriteLine(">> Acelerando (Botão Direito)...");
-                SegurarBotaoDireito(locColher.X, locColher.Y, 10000); // 10 segundos
+                Console.WriteLine(">> Acelerando...");
+                SegurarBotaoDireito(locColher.X, locColher.Y, 10000); // 10s
 
                 Console.WriteLine(">> Aguardando Recompensa...");
                 Thread.Sleep(2000);
 
-                // Procura o botão "LEGAL"
                 if (TentarEncontrarEClicar("botoes/botao_legal.png", 10))
-                {
                     Console.WriteLine("Botão Legal clicado.");
-                }
-                else
-                {
-                    Console.WriteLine("[AVISO] Botão Legal não apareceu. Seguindo...");
-                }
 
                 Thread.Sleep(3000);
             }
@@ -95,21 +81,22 @@ namespace BotBallXPit
             // ==============================================================================
             // PASSO 2: ENTRAR NA BATALHA
             // ==============================================================================
-            // Tenta achar o botão de batalha
             if (TentarEncontrarEClicar("botoes/botao_batalha.png", 3))
             {
                 Console.WriteLine("Clicou em Batalha. Aguardando menu...");
-                Thread.Sleep(3000);
 
-                // Verifica se o cabeçalho do menu apareceu
-                if (LocalizarImagem("personages/header_personagens.png", 0.8) != Point.Empty)
+                // --- CORREÇÃO AQUI ---
+                // Em vez de esperar fixo e olhar uma vez, usamos um loop de espera.
+                // Isso resolve o problema se o menu demorar um pouco para carregar.
+                if (AguardarImagem("personagens/headerpersonagens.png", 3))
                 {
                     Console.WriteLine("Menu detectado!");
                     ExecutarSelecaoDeTime();
                 }
                 else
                 {
-                    Console.WriteLine("[AVISO] Cabeçalho do menu não encontrado.");
+                    Console.WriteLine("[AVISO] Cabeçalho do menu não apareceu após 10 segundos.");
+                    Console.WriteLine("Dica: Verifique se o arquivo headerpersonagens.png é realmente um PNG.");
                 }
             }
         }
@@ -118,25 +105,22 @@ namespace BotBallXPit
         {
             Console.WriteLine("--- MONTANDO O TIME ---");
 
-            // 1. Selecionar o RADICAL (Obrigatório)
+            // 1. Selecionar o RADICAL
             Console.WriteLine(">> Procurando Radical...");
-            if (TentarEncontrarEClicar("personages/radical.png", 5))
+            if (TentarEncontrarEClicar("personagens/radical2.png", 5))
             {
                 Thread.Sleep(1000);
-                // Clica em SELECIONAR
-                if (TentarEncontrarEClicar("botoes/selecionar.png", 3))
-                {
-                    Console.WriteLine(">> Radical Selecionado.");
-                    Thread.Sleep(1500);
-                }
+                TentarEncontrarEClicar("botoes/selecionar.png", 3);
+                Console.WriteLine(">> Radical Selecionado.");
+                Thread.Sleep(1500);
             }
             else
             {
-                Console.WriteLine("[ERRO] Radical não encontrado! Abortando seleção.");
+                Console.WriteLine("[ERRO] Radical não encontrado! (Verifique a imagem radical.png)");
                 return;
             }
 
-            // 2. Clicar no slot VAZIO (Novo Parceiro)
+            // 2. Novo Parceiro
             Console.WriteLine(">> Clicando no slot vazio...");
             if (!TentarEncontrarEClicar("botoes/novo_parceiro.png", 5))
             {
@@ -145,42 +129,56 @@ namespace BotBallXPit
             }
             Thread.Sleep(1500);
 
-            // 3. Selecionar ALEATÓRIO (Exceto Radical)
+            // 3. Selecionar Aleatório
             Console.WriteLine(">> Escolhendo parceiro aleatório...");
             if (EscolherPersonagemAleatorio())
             {
                 Thread.Sleep(1000);
-                // Clica em SELECIONAR novamente
                 TentarEncontrarEClicar("botoes/selecionar.png", 3);
                 Thread.Sleep(1500);
 
-                // 4. Iniciar Partida
                 Console.WriteLine(">> Clicando em CONTINUAR...");
                 if (TentarEncontrarEClicar("botoes/continuar.png", 5))
                 {
                     Console.WriteLine("--- PARTIDA INICIADA ---");
-                    // Delay longo para garantir que saiu da tela e o bot não tente clicar em nada
                     Thread.Sleep(10000);
                 }
             }
             else
             {
-                Console.WriteLine("[ERRO] Nenhum parceiro aleatório visível encontrado.");
+                Console.WriteLine("[ERRO] Nenhum parceiro aleatório encontrado.");
             }
+        }
+
+        // --- FUNÇÃO NOVA: Apenas espera algo aparecer na tela (sem clicar) ---
+        static bool AguardarImagem(string caminhoRelativo, int timeoutSegundos)
+        {
+            int tentativas = 0;
+            while (tentativas < timeoutSegundos)
+            {
+                // Verifica se a imagem está na tela
+                if (LocalizarImagem(caminhoRelativo, 0.7) != Point.Empty)
+                    return true;
+
+                Console.Write("."); // Feedback visual
+                Thread.Sleep(1000);
+                tentativas++;
+            }
+            Console.WriteLine();
+            return false;
         }
 
         static bool EscolherPersonagemAleatorio()
         {
             try
             {
-                string pastaPersonagens = Path.Combine(BaseDir, "Images", "personages");
+                string pastaPersonagens = Path.Combine(BaseDir, "Images", "personagens");
+                if (!Directory.Exists(pastaPersonagens)) return false;
 
-                // Pega todos os arquivos png/jpg da pasta
                 var arquivos = Directory.GetFiles(pastaPersonagens, "*.*")
                                        .Where(s => s.EndsWith(".png") || s.EndsWith(".jpg"))
                                        .ToList();
 
-                // Embaralha a lista (Shuffle)
                 Random rng = new Random();
                 var arquivosEmbaralhados = arquivos.OrderBy(a => rng.Next()).ToList();
 
@@ -188,15 +186,13 @@ namespace BotBallXPit
                 {
                     string nomeArquivo = Path.GetFileName(arquivo);
 
-                    // Pula o Radical e o próprio print do menu se estiver lá
+                    // Ignora arquivos de controle
                     if (nomeArquivo.ToLower().Contains("radical") ||
-                        nomeArquivo.ToLower().Contains("menu_personagens"))
+                        nomeArquivo.ToLower().Contains("header") ||
+                        nomeArquivo.ToLower().Contains("menu"))
                         continue;
 
-                    // Tenta achar esse personagem na tela
-                    // Usamos um caminho relativo para aproveitar a função LocalizarImagem
-                    Point pos = LocalizarImagem($"personages/{nomeArquivo}", 0.85); // Confiança alta para distinguir bonecos parecidos
-
+                    Point pos = LocalizarImagem($"personagens/{nomeArquivo}", 0.8);
                     if (pos != Point.Empty)
                     {
                         Console.WriteLine($"Parceiro escolhido: {nomeArquivo}");
@@ -212,14 +208,12 @@ namespace BotBallXPit
             return false;
         }
 
-        // --- FUNÇÕES UTILITÁRIAS ---
-
         static bool TentarEncontrarEClicar(string caminhoRelativo, int timeoutSegundos)
         {
             int tentativas = 0;
             while (tentativas < timeoutSegundos)
             {
-                Point pos = LocalizarImagem(caminhoRelativo, 0.8);
+                Point pos = LocalizarImagem(caminhoRelativo, 0.7); // Baixei levemente a confiança
                 if (pos != Point.Empty)
                 {
                     Clicar(pos.X, pos.Y);
@@ -233,20 +227,25 @@ namespace BotBallXPit
 
         static Point LocalizarImagem(string caminhoRelativo, double confiancaMinima)
         {
-            // Constrói o caminho completo baseado no BaseDir
-            // Isso permite passar "botoes/botao.png" ou "personages/boneco.png"
+            // CORREÇÃO: Garante que as barras estao certas para o Windows
+            caminhoRelativo = caminhoRelativo.Replace('/', Path.DirectorySeparatorChar)
+                                             .Replace('\\', Path.DirectorySeparatorChar);
+
             string caminhoCompleto = Path.Combine(BaseDir, "Images", caminhoRelativo);
 
             if (!File.Exists(caminhoCompleto))
             {
-                // Fallback: Tenta achar direto na pasta Images se falhar
                 string nomeArquivo = Path.GetFileName(caminhoCompleto);
                 string caminhoAlternativo = Path.Combine(BaseDir, "Images", nomeArquivo);
 
                 if (File.Exists(caminhoAlternativo))
                     caminhoCompleto = caminhoAlternativo;
                 else
+                {
+                    // Debug para você saber se o arquivo não está sendo achado no disco
+                    // Console.WriteLine($"[DEBUG] Arquivo não existe: {caminhoCompleto}");
                     return Point.Empty;
+                }
             }
 
             using (Bitmap printScreen = CapturarTela())
