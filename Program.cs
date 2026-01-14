@@ -178,20 +178,17 @@ namespace BotBallXPit
         {
             Console.WriteLine("--- SELEÇÃO DE MAPA ---");
 
-            MoverParaCantoEsquerdo();
-
             // 1. Validar se estamos no NOVO JOGO+
-            // Se NÃO encontrar a imagem "Novo_Jogo_+", clica na setinha da direita
             if (LocalizarImagem("mapas/Novo_Jogo_+.png", 0.7) == Point.Empty)
             {
                 Console.WriteLine(">> Não estamos no Novo Jogo+. Clicando na seta direita...");
                 if (TentarEncontrarEClicar("botoes/seta_direita.png", 3))
                 {
-                    Thread.Sleep(2000); // Espera a animação de troca de aba
+                    Thread.Sleep(2000);
                 }
                 else
                 {
-                    Console.WriteLine("[ERRO] Seta direita não encontrada. Continuando mesmo assim...");
+                    Console.WriteLine("[ERRO] Seta direita não encontrada. Continuando...");
                 }
             }
             else
@@ -199,85 +196,115 @@ namespace BotBallXPit
                 Console.WriteLine(">> Já estamos no Novo Jogo+.");
             }
 
-            // 2. Escolher e buscar mapa aleatório
+            Point pontoDeScroll = LocalizarImagem("botoes/scroll_lateral.png", 0.7);
+
+            // 2. Escolher e buscar mapa
             Console.WriteLine(">> Buscando mapa aleatório...");
             bool mapaEncontrado = false;
             int tentativasScroll = 0;
-            const int MAX_SCROLLS = 15; // Limite para não ficar num loop infinito
+            const int MAX_SCROLLS = 15;
 
-            // Sorteia qual mapa queremos jogar
             string mapaAlvo = SortearMapaAlvo();
             if (string.IsNullOrEmpty(mapaAlvo))
             {
-                Console.WriteLine("[ERRO] Não há mapas válidos na pasta Images/mapas.");
+                Console.WriteLine("[ERRO] Sem mapas válidos.");
                 return;
             }
-            Console.WriteLine($">> O Bot quer jogar no mapa: {Path.GetFileNameWithoutExtension(mapaAlvo)}");
+            Console.WriteLine($">> Alvo: {Path.GetFileNameWithoutExtension(mapaAlvo)}");
 
             while (!mapaEncontrado && tentativasScroll < MAX_SCROLLS)
             {
-                // Tenta achar o mapa sorteado na tela atual
                 if (TentarEncontrarEClicar($"mapas/{mapaAlvo}", 2))
                 {
-                    Console.WriteLine(">> Mapa encontrado e selecionado!");
+                    Console.WriteLine(">> Mapa selecionado!");
                     mapaEncontrado = true;
-                    Thread.Sleep(1000); // Espera seleção
+                    Thread.Sleep(1000);
                     break;
                 }
 
-                // Se não achou, verifica se chegou no fim da lista
-                // (mapabloqueado ou vaziovasto indicam o final)
                 if (LocalizarImagem("mapas/mapabloqueado.png", 0.7) != Point.Empty ||
                     LocalizarImagem("mapas/vaziovasto.png", 0.7) != Point.Empty)
                 {
-                    Console.WriteLine(">> Chegamos no fim da lista. Voltando ao topo...");
-                    // Scrollzão pra cima (8 vezes)
+                    Console.WriteLine(">> Fim da lista. Voltando ao topo...");
                     for (int i = 0; i < 8; i++)
                     {
-                        ScrollMouse(1000); // Valor positivo = Rolar para cima
+                        ScrollMouse(1000, pontoDeScroll);
                         Thread.Sleep(300);
                     }
-                    tentativasScroll = 0; // Reseta contador para procurar desde o topo
-
-                    // Sorteia outro mapa para garantir que não ficamos presos procurando um mapa que não existe
+                    tentativasScroll = 0;
                     mapaAlvo = SortearMapaAlvo();
-                    Console.WriteLine($">> Trocando alvo para: {Path.GetFileNameWithoutExtension(mapaAlvo)}");
+                    Console.WriteLine($">> Novo alvo: {Path.GetFileNameWithoutExtension(mapaAlvo)}");
                     continue;
                 }
 
                 // Scrollzão pra cima (10 vezes) para começar pelo primeiro mapa. O jogo começa com o scroll no meio da lista.
                 for (int i = 0; i < 10; i++)
                 {
-                    ScrollMouse(1000); // Valor positivo = Rolar para cima
+                    ScrollMouse(1000, pontoDeScroll); // Valor positivo = Rolar para cima
                     Thread.Sleep(300);
                 }
                 // Se não achou e não é o fim, desce a tela
                 Console.WriteLine(">> Mapa não visível. Rolando para baixo...");
-                ScrollMouse(-1000); // Valor negativo = Rolar para baixo
+                ScrollMouse(-1000, pontoDeScroll); // Valor negativo = Rolar para baixo
                 Thread.Sleep(500); // Espera o scroll assentar
                 tentativasScroll++;
             }
 
             if (mapaEncontrado)
             {
-                Console.WriteLine(">> Mapa selecionado. Clicando em JOGAR...");
+                Console.WriteLine(">> Clicando em JOGAR...");
 
-                // --- ALTERAÇÃO AQUI ---
-                // Clica no botão Jogar para efetivamente começar a partida
                 if (TentarEncontrarEClicar("botoes/botao_jogar.png", 5))
                 {
                     Console.WriteLine("--- PARTIDA INICIADA ---");
-                    // Agora o bot dorme enquanto você joga, até implementarmos a detecção de Vitória/Derrota
-                    Thread.Sleep(10000);
+                    Console.WriteLine(">> Monitorando fim de jogo a cada 15s...");
+
+                    // --- NOVO: LOOP DE MONITORAMENTO DA PARTIDA ---
+                    bool partidaAcabou = false;
+                    while (!partidaAcabou)
+                    {
+                        // Espera 15 segundos antes de checar
+                        Thread.Sleep(15000);
+
+                        Console.WriteLine(">> Verificando se a partida acabou...");
+
+                        // Procura o botão "Voltar Base"
+                        Point posVoltar = LocalizarImagem("botoes/botao_voltarbase.png", 0.7);
+
+                        if (posVoltar != Point.Empty)
+                        {
+                            Console.WriteLine("--- FIM DE JOGO DETECTADO ---");
+
+                            Console.WriteLine(">> Clicando em Voltar Base...");
+                            Clicar(posVoltar.X, posVoltar.Y);
+                            partidaAcabou = true; // Sai do loop da partida
+
+                            // Espera 10 segundos para carregar a base
+                            Console.WriteLine(">> Carregando a base (10s)...");
+                            Thread.Sleep(10000);
+
+                            // Clica no botão Legal final (se houver recompensa ou confirmação)
+                            if (TentarEncontrarEClicar("botoes/botao_legal.png", 5))
+                            {
+                                Console.WriteLine(">> Botão Legal (pós-jogo) clicado.");
+                            }
+
+                            Console.WriteLine(">> Ciclo finalizado! Reiniciando...");
+                        }
+                        else
+                        {
+                            Console.Write("."); // Apenas um sinal de vida no console
+                        }
+                    }
                 }
                 else
                 {
-                    Console.WriteLine("[ERRO] Botão JOGAR não encontrado após selecionar o mapa.");
+                    Console.WriteLine("[ERRO] Botão JOGAR não encontrado.");
                 }
             }
             else
             {
-                Console.WriteLine("[ERRO] Não consegui selecionar o mapa desejado após várias tentativas.");
+                Console.WriteLine("[ERRO] Falha ao selecionar mapa.");
             }
         }
 
@@ -489,23 +516,14 @@ namespace BotBallXPit
             mouse_event(MOUSEEVENTF_RIGHTUP, x, y, 0, 0);
         }
 
-        static void ScrollMouse(int quantidade)
+        static void ScrollMouse(int quantidade, Point alvo)
         {
-            // Move o mouse para o centro da tela para o scroll ser capturado pelo jogo
-            var bounds = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
-            SetCursorPos(bounds.Width / 2, bounds.Height / 2);
+            // Move o mouse para onde a imagem "scroll_lateral" está
+            SetCursorPos(alvo.X, alvo.Y);
             Thread.Sleep(100);
 
-            // Evento de roda do mouse (dwData positivo = Cima, negativo = Baixo)
+            // Rola a roda
             mouse_event(MOUSEEVENTF_WHEEL, 0, 0, quantidade, 0);
-        }
-
-        static void MoverParaCantoEsquerdo()
-        {
-            Thread.Sleep(500);
-            Console.WriteLine(">> Movendo mouse para o canto (teste)...");
-            SetCursorPos(0, 0);
-            Thread.Sleep(500); // Espera meio segundo pra você ver que ele foi pra lá
         }
     }
 }
