@@ -151,15 +151,13 @@ namespace BotBallXPit
                 Console.WriteLine("[ERRO] Slot 'Novo Parceiro' não encontrado.");
                 return;
             }
-            Thread.Sleep(3000);
+            Thread.Sleep(1500);
 
             // 3. Selecionar ALEATÓRIO
             Console.WriteLine(">> Escolhendo parceiro aleatório...");
-            Thread.Sleep(3000);
             if (EscolherPersonagemAleatorio())
             {
-                Thread.Sleep(3000);
-                // Clica em SELECIONAR novamente
+                Thread.Sleep(1500);
                 TentarEncontrarEClicar("botoes/botao_selecionar.png", 3);
                 Thread.Sleep(1500);
 
@@ -179,6 +177,8 @@ namespace BotBallXPit
         static void ExecutarSelecaoDeMapa()
         {
             Console.WriteLine("--- SELEÇÃO DE MAPA ---");
+
+            MoverParaCantoEsquerdo();
 
             // 1. Validar se estamos no NOVO JOGO+
             // Se NÃO encontrar a imagem "Novo_Jogo_+", clica na setinha da direita
@@ -498,6 +498,14 @@ namespace BotBallXPit
 
             // Evento de roda do mouse (dwData positivo = Cima, negativo = Baixo)
             mouse_event(MOUSEEVENTF_WHEEL, 0, 0, quantidade, 0);
+        }
+
+        static void MoverParaCantoEsquerdo()
+        {
+            Thread.Sleep(500);
+            Console.WriteLine(">> Movendo mouse para o canto (teste)...");
+            SetCursorPos(0, 0);
+            Thread.Sleep(500); // Espera meio segundo pra você ver que ele foi pra lá
         }
     }
 }
