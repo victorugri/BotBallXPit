@@ -130,7 +130,7 @@ namespace BotBallXPit
 
             // 1. Selecionar o RADICAL (Obrigatório)
             Console.WriteLine(">> Procurando Radical...");
-            if (TentarEncontrarEClicar("personagens/radical.png", 5))
+            if (TentarEncontrarEClicar("personagens/radical2.png", 5))
             {
                 Thread.Sleep(1000);
                 // Clica em SELECIONAR
@@ -178,14 +178,14 @@ namespace BotBallXPit
         {
             Console.WriteLine("--- SELEÇÃO DE MAPA ---");
 
-            // 1. Validar se estamos no NOVO JOGO+ (Mantido igual)
+            // 1. Validar se estamos no NOVO JOGO+
             if (LocalizarImagem("mapas/Novo_Jogo_+.png", 0.7) == Point.Empty)
             {
                 Console.WriteLine(">> Não estamos no Novo Jogo+. Clicando na seta direita...");
                 if (TentarEncontrarEClicar("botoes/seta_direita.png", 3))
                     Thread.Sleep(2000);
                 else
-                    Console.WriteLine("[ERRO] Seta direita não encontrada.");
+                    Console.WriteLine("[ERRO] Seta direita não encontrada. Continuando...");
             }
             else
             {
@@ -199,17 +199,12 @@ namespace BotBallXPit
                 var bounds = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
                 pontoDeScroll = new Point(bounds.Width / 2, bounds.Height / 2);
             }
-            else
-            {
-                Console.WriteLine($">> Ponto de Scroll definido em: {pontoDeScroll}");
-            }
 
-            // --- NOVA ESTRUTURA DE LOOP PARA TENTAR MAPAS ATÉ CONSEGUIR JOGAR ---
+            // --- LOOP DE TENTATIVA DE MAPAS ---
             bool jogoIniciado = false;
 
             while (!jogoIniciado)
             {
-                // 2. Escolher mapa aleatório
                 Console.WriteLine(">> Buscando mapa aleatório...");
                 bool mapaEncontrado = false;
                 int tentativasScroll = 0;
@@ -223,11 +218,11 @@ namespace BotBallXPit
                 }
                 Console.WriteLine($">> Alvo da vez: {Path.GetFileNameWithoutExtension(mapaAlvo)}");
 
-                // Scrollzão pra cima (2 vezes) para começar pelo primeiro mapa. O jogo começa com o scroll no meio da lista.
-                for (int i = 0; i < 2; i++)
+                // Scrollzão pra cima (10 vezes) para começar pelo primeiro mapa. O jogo começa com o scroll no meio da lista.
+                for (int i = 0; i < 10; i++)
                 {
                     Console.WriteLine($">> Mapa não visível. Primeiro scroll para cima...{i}");
-                    ScrollMouse(3000, pontoDeScroll); // Valor positivo = Rolar para cima
+                    ScrollMouse(50000, pontoDeScroll); // Valor positivo = Rolar para cima
                     Thread.Sleep(300);
                 }
                 // Loop de busca (Scroll)
@@ -235,24 +230,23 @@ namespace BotBallXPit
                 {
                     if (TentarEncontrarEClicar($"mapas/{mapaAlvo}", 2))
                     {
-                        Console.WriteLine(">> Mapa encontrado e selecionado!");
+                        Console.WriteLine(">> Mapa selecionado!");
                         mapaEncontrado = true;
                         Thread.Sleep(1000);
                         break;
                     }
 
-                    // Verifica fim da lista e volta pro topo se necessário
+                    // Verifica fim da lista
                     if (LocalizarImagem("mapas/mapabloqueado.png", 0.7) != Point.Empty ||
                         LocalizarImagem("mapas/vaziovasto.png", 0.7) != Point.Empty)
                     {
                         Console.WriteLine(">> Fim da lista. Voltando ao topo...");
-                        for (int i = 0; i < 8; i++)
+                        for (int i = 0; i < 10; i++)
                         {
-                            ScrollMouse(2000, pontoDeScroll);
+                            ScrollMouse(50000, pontoDeScroll);
                             Thread.Sleep(300);
                         }
                         tentativasScroll = 0;
-                        // Troca o alvo pra não ficar preso procurando o mesmo mapa
                         mapaAlvo = SortearMapaAlvo();
                         Console.WriteLine($">> Trocando alvo para: {Path.GetFileNameWithoutExtension(mapaAlvo)}");
                         continue;
@@ -260,7 +254,7 @@ namespace BotBallXPit
 
                     // Se não achou e não é o fim, desce a tela
                     Console.WriteLine(">> Mapa não visível. Rolando para baixo...");
-                    ScrollMouse(-1500, pontoDeScroll); // Valor negativo = Rolar para baixo
+                    ScrollMouse(-50000, pontoDeScroll); // Valor negativo = Rolar para baixo
                     Thread.Sleep(500); // Espera o scroll assentar
                     tentativasScroll++;
                 }
@@ -270,70 +264,91 @@ namespace BotBallXPit
                     Console.WriteLine(">> Clicando em JOGAR...");
                     if (TentarEncontrarEClicar("botoes/botao_jogar.png", 3))
                     {
-                        // --- VALIDAÇÃO DE MAPA JÁ CONCLUÍDO ---
+                        // Validação de mapa já concluído
                         Console.WriteLine(">> Verificando aviso de 'Já Concluiu'...");
-                        Thread.Sleep(2000); // Espera o popup aparecer
+                        Thread.Sleep(2000);
 
                         if (LocalizarImagem("botoes/ja_concluiu.png", 0.7) != Point.Empty)
                         {
-                            Console.WriteLine("[AVISO] Este mapa já foi concluído! Recusando...");
-
-                            // Clica em NÃO
+                            Console.WriteLine("[AVISO] Mapa já concluído! Recusando...");
                             if (TentarEncontrarEClicar("botoes/botao_nao.png", 3))
                             {
-                                Console.WriteLine(">> Retornando à seleção de mapas...");
                                 Thread.Sleep(2000);
-
-                                // Volta o scroll pro topo para garantir uma nova busca limpa
+                                // Volta ao topo para nova busca
                                 for (int i = 0; i < 5; i++) { ScrollMouse(500, pontoDeScroll); Thread.Sleep(100); }
-
-                                // O "continue" aqui faz o loop 'while (!jogoIniciado)' rodar de novo
-                                // e sortear um NOVO mapa.
                                 continue;
                             }
                         }
 
-                        // Se passou direto (não tinha popup), o jogo iniciou!
                         jogoIniciado = true;
                         Console.WriteLine("--- PARTIDA INICIADA ---");
                     }
                     else
                     {
-                        Console.WriteLine("[ERRO] Botão JOGAR não encontrado. Tentando outro mapa...");
+                        Console.WriteLine("[ERRO] Botão JOGAR não encontrado. Tentando outro...");
                         continue;
                     }
                 }
                 else
                 {
-                    Console.WriteLine("[ERRO] Não achei o mapa. Tentando outro...");
-                    // Volta ao topo e tenta de novo
+                    Console.WriteLine("[ERRO] Mapa não encontrado. Reiniciando busca...");
                     for (int i = 0; i < 5; i++) { ScrollMouse(500, pontoDeScroll); Thread.Sleep(100); }
                 }
             }
 
-            // --- LOOP DE MONITORAMENTO DA PARTIDA ---
+            // ==============================================================================
+            // FASE FINAL: GERENCIAMENTO DE FIM DE JOGO
+            // ==============================================================================
+            // Aqui o bot entra num loop inteligente que limpa as telas de recompensa
+
             bool partidaAcabou = false;
+            Console.WriteLine(">> Monitorando a partida e recompensas...");
+
             while (!partidaAcabou)
             {
-                Console.WriteLine(">> Jogando... (Verificando em 15s)");
-                Thread.Sleep(15000);
+                // 1. Verifica ENGRENAGENS (Botão Uau)
+                if (TentarEncontrarEClicar("botoes/botao_uau.png", 1))
+                {
+                    Console.WriteLine(">> [RECOMPENSA] Engrenagem coletada (Uau)!");
+                    Thread.Sleep(2000); // Espera a próxima tela aparecer
+                    continue; // Reinicia o loop para ver o que vem depois
+                }
 
+                // 2. Verifica LEVEL UP (Botão Legal)
+                // Se aparecer 2x, o loop vai pegar na primeira passada e depois na segunda
+                if (TentarEncontrarEClicar("botoes/botao_legal.png", 1))
+                {
+                    Console.WriteLine(">> [LEVEL UP] Personagem evoluiu (Legal)!");
+                    Thread.Sleep(2000);
+                    continue;
+                }
+
+                // 3. Verifica VOLTAR BASE (Sinal de Fim Real)
                 Point posVoltar = LocalizarImagem("botoes/botao_voltarbase.png", 0.7);
                 if (posVoltar != Point.Empty)
                 {
-                    Console.WriteLine("--- FIM DE JOGO DETECTADO ---");
-
+                    Console.WriteLine("--- TODOS OS EVENTOS FINALIZADOS ---");
                     Console.WriteLine(">> Clicando em Voltar Base...");
                     Clicar(posVoltar.X, posVoltar.Y);
-                    partidaAcabou = true;
 
+                    partidaAcabou = true; // Sai do loop da partida
+
+                    // Fluxo final pós-partida
                     Console.WriteLine(">> Carregando a base (10s)...");
                     Thread.Sleep(10000);
 
+                    // Verifica se tem algum prêmio final de lobby
                     if (TentarEncontrarEClicar("botoes/botao_legal.png", 5))
-                        Console.WriteLine(">> Botão Legal (pós-jogo) clicado.");
+                        Console.WriteLine(">> Botão Legal (Lobby) clicado.");
 
-                    Console.WriteLine(">> Ciclo finalizado! Reiniciando...");
+                    Console.WriteLine(">> Ciclo finalizado! O bot reiniciará em breve.");
+                }
+                else
+                {
+                    // Se não achou nada, espera 5 segundos e olha de novo
+                    // Isso evita fritar o processador e dá o intervalo de "monitoramento"
+                    Console.Write(".");
+                    Thread.Sleep(5000);
                 }
             }
         }
