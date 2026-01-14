@@ -110,7 +110,7 @@ namespace BotBallXPit
             if (TentarEncontrarEClicar("personagens/radical2.png", 5))
             {
                 Thread.Sleep(1000);
-                TentarEncontrarEClicar("botoes/selecionar.png", 3);
+                TentarEncontrarEClicar("botoes/botao_selecionar.png", 3);
                 Console.WriteLine(">> Radical Selecionado.");
                 Thread.Sleep(1500);
             }
@@ -134,7 +134,7 @@ namespace BotBallXPit
             if (EscolherPersonagemAleatorio())
             {
                 Thread.Sleep(1000);
-                TentarEncontrarEClicar("botoes/selecionar.png", 3);
+                TentarEncontrarEClicar("botoes/botao_selecionar.png", 3);
                 Thread.Sleep(1500);
 
                 Console.WriteLine(">> Clicando em CONTINUAR...");
