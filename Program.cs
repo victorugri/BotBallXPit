@@ -22,19 +22,20 @@ namespace BotBallXPit
         [DllImport("user32.dll")]
         static extern bool SetCursorPos(int X, int Y);
 
-        // Constantes de Ação do Mouse
         private const int MOUSEEVENTF_LEFTDOWN = 0x02;
         private const int MOUSEEVENTF_LEFTUP = 0x04;
         private const int MOUSEEVENTF_RIGHTDOWN = 0x08;
         private const int MOUSEEVENTF_RIGHTUP = 0x10;
         private const int MOUSEEVENTF_WHEEL = 0x0800;
 
-        // Diretório Base (ajustado para rodar fora do bin/Debug)
         static readonly string BaseDir = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\"));
+
+        // Variável Global para forçar o mapa que falta ser concluído
+        static string _mapaObrigatorio = "";
 
         static void Main(string[] args)
         {
-            Console.WriteLine("=== BOT BALL X PIT - V5 COMPLETA (Colheita + Personagem + Mapa) ===");
+            Console.WriteLine("=== BOT BALL X PIT - V7 PROGRESSÃO (Correção de Threshold) ===");
             Console.WriteLine($"Diretório base: {BaseDir}");
             Console.WriteLine("Pressione Ctrl+C para parar.");
             Console.WriteLine("------------------------------------------------");
@@ -49,24 +50,23 @@ namespace BotBallXPit
                 {
                     Console.WriteLine($"[ERRO CRÍTICO NA MAIN] {ex.Message}");
                 }
-
-                // Pausa entre ciclos completos
                 Thread.Sleep(2000);
             }
         }
 
         static void ExecutarRotinaCompleta()
         {
+            // Reseta a memória do mapa a cada ciclo novo
+            _mapaObrigatorio = "";
+
             // ==============================================================================
             // PASSO 1: COLHEITA
             // ==============================================================================
-            // Verifica se o botão de colher existe (sem clicar ainda)
             Point locColher = LocalizarImagem("botoes/botao_colher.png", 0.7);
 
             if (locColher != Point.Empty)
             {
                 Console.WriteLine("--- COLHEITA DETECTADA ---");
-
                 Console.WriteLine(">> Clique 1 (Abrir)...");
                 Clicar(locColher.X, locColher.Y);
                 Thread.Sleep(3000);
@@ -76,19 +76,13 @@ namespace BotBallXPit
                 Thread.Sleep(3000);
 
                 Console.WriteLine(">> Acelerando (Segurando botão direito)...");
-                SegurarBotaoDireito(locColher.X, locColher.Y, 10000); // 10 segundos
+                SegurarBotaoDireito(locColher.X, locColher.Y, 10000);
 
                 Console.WriteLine(">> Aguardando Recompensa...");
                 Thread.Sleep(2000);
 
                 if (TentarEncontrarEClicar("botoes/botao_legal.png", 10))
-                {
                     Console.WriteLine("Botão Legal clicado.");
-                }
-                else
-                {
-                    Console.WriteLine("[AVISO] Botão Legal não apareceu. Seguindo...");
-                }
 
                 Thread.Sleep(3000);
             }
@@ -100,26 +94,19 @@ namespace BotBallXPit
             {
                 Console.WriteLine("Clicou em Batalha. Aguardando menu de personagens...");
 
-                // Espera até 10 segundos pelo cabeçalho do menu de personagens
-                // (Usando o nome corrigido 'headerpersonagens.png' sem underline, conforme seu arquivo)
                 if (AguardarImagem("personagens/headerpersonagens.png", 10))
                 {
                     Console.WriteLine("Menu de Personagens detectado!");
-
-                    // Executa a lógica de montar o time
                     ExecutarSelecaoDeTime();
 
-                    // Se a seleção de time deu certo e clicou em continuar, vamos para o MAPA
                     Console.WriteLine(">> Aguardando transição para tela de Mapas...");
                     Thread.Sleep(3000);
 
-                    // Executa a lógica de escolher o mapa e iniciar o jogo
                     ExecutarSelecaoDeMapa();
                 }
                 else
                 {
-                    Console.WriteLine("[AVISO] Cabeçalho do menu de personagens não apareceu.");
-                    Console.WriteLine("Dica: Verifique se o arquivo em 'Images/personagens/headerpersonagens.png' existe.");
+                    Console.WriteLine("[AVISO] Menu de personagens não apareceu.");
                 }
             }
         }
@@ -130,47 +117,46 @@ namespace BotBallXPit
 
             // 1. Selecionar o RADICAL (Obrigatório)
             Console.WriteLine(">> Procurando Radical...");
+            // Usando radical2.png conforme seu último código
             if (TentarEncontrarEClicar("personagens/radical2.png", 5))
             {
                 Thread.Sleep(1000);
-                // Clica em SELECIONAR
                 TentarEncontrarEClicar("botoes/botao_selecionar.png", 3);
                 Console.WriteLine(">> Radical Selecionado.");
                 Thread.Sleep(1500);
             }
             else
             {
-                Console.WriteLine("[ERRO] Radical não encontrado! Abortando seleção.");
+                Console.WriteLine("[ERRO] Radical não encontrado!");
                 return;
             }
 
-            // 2. Clicar no slot VAZIO (Novo Parceiro)
+            // 2. Novo Parceiro
             Console.WriteLine(">> Clicando no slot vazio...");
             if (!TentarEncontrarEClicar("botoes/novo_parceiro.png", 5))
             {
                 Console.WriteLine("[ERRO] Slot 'Novo Parceiro' não encontrado.");
                 return;
             }
-            Thread.Sleep(1500);
+            Thread.Sleep(2000);
 
-            // 3. Selecionar ALEATÓRIO
-            Console.WriteLine(">> Escolhendo parceiro aleatório...");
-            if (EscolherPersonagemAleatorio())
+            // 3. Selecionar POR PROGRESSO
+            Console.WriteLine(">> Analisando progresso dos personagens...");
+            if (EscolherPersonagemPorProgresso())
             {
-                Thread.Sleep(1500);
+                Thread.Sleep(1000);
                 TentarEncontrarEClicar("botoes/botao_selecionar.png", 3);
                 Thread.Sleep(1500);
 
-                // 4. Ir para Mapas
-                Console.WriteLine(">> Clicando em CONTINUAR (Indo para mapas)...");
+                Console.WriteLine(">> Clicando em CONTINUAR...");
                 if (TentarEncontrarEClicar("botoes/botao_continuar.png", 5))
                 {
-                    // A função ExecutarSelecaoDeMapa será chamada na RotinaCompleta após isso
+                    // Sucesso, vai para mapas
                 }
             }
             else
             {
-                Console.WriteLine("[ERRO] Nenhum parceiro aleatório encontrado.");
+                Console.WriteLine("[ERRO] Falha ao selecionar parceiro.");
             }
         }
 
@@ -178,14 +164,14 @@ namespace BotBallXPit
         {
             Console.WriteLine("--- SELEÇÃO DE MAPA ---");
 
-            // 1. Validar se estamos no NOVO JOGO+
+            // 1. Validar NOVO JOGO+
             if (LocalizarImagem("mapas/Novo_Jogo_+.png", 0.7) == Point.Empty)
             {
                 Console.WriteLine(">> Não estamos no Novo Jogo+. Clicando na seta direita...");
                 if (TentarEncontrarEClicar("botoes/seta_direita.png", 3))
                     Thread.Sleep(2000);
                 else
-                    Console.WriteLine("[ERRO] Seta direita não encontrada. Continuando...");
+                    Console.WriteLine("[ERRO] Seta direita não encontrada.");
             }
             else
             {
@@ -200,35 +186,36 @@ namespace BotBallXPit
                 pontoDeScroll = new Point(bounds.Width / 2, bounds.Height / 2);
             }
 
-            // --- LOOP DE TENTATIVA DE MAPAS ---
             bool jogoIniciado = false;
 
             while (!jogoIniciado)
             {
-                Console.WriteLine(">> Buscando mapa aleatório...");
+                string mapaAlvo = "";
+
+                // --- LÓGICA DE ALVO ---
+                if (!string.IsNullOrEmpty(_mapaObrigatorio))
+                {
+                    Console.WriteLine($">> [MODO PROGRESSÃO] O personagem precisa do mapa: {_mapaObrigatorio}");
+                    mapaAlvo = _mapaObrigatorio + ".png";
+                }
+                else
+                {
+                    Console.WriteLine(">> [MODO ALEATÓRIO] Mapa livre ou progresso completo.");
+                    mapaAlvo = SortearMapaAlvo();
+                }
+
+                if (string.IsNullOrEmpty(mapaAlvo)) { Console.WriteLine("[ERRO] Mapa inválido."); return; }
+
                 bool mapaEncontrado = false;
                 int tentativasScroll = 0;
-                const int MAX_SCROLLS = 15;
 
-                string mapaAlvo = SortearMapaAlvo();
-                if (string.IsNullOrEmpty(mapaAlvo))
-                {
-                    Console.WriteLine("[ERRO] Não há mapas válidos.");
-                    return;
-                }
-                Console.WriteLine($">> Alvo da vez: {Path.GetFileNameWithoutExtension(mapaAlvo)}");
+                // Vai pro topo antes de começar (garantia)
+                for (int i = 0; i < 5; i++) { ScrollMouse(5000, pontoDeScroll); Thread.Sleep(100); }
 
-                // Scrollzão pra cima (10 vezes) para começar pelo primeiro mapa. O jogo começa com o scroll no meio da lista.
-                for (int i = 0; i < 10; i++)
+                // Loop de busca
+                while (!mapaEncontrado && tentativasScroll < 20)
                 {
-                    Console.WriteLine($">> Mapa não visível. Primeiro scroll para cima...{i}");
-                    ScrollMouse(50000, pontoDeScroll); // Valor positivo = Rolar para cima
-                    Thread.Sleep(300);
-                }
-                // Loop de busca (Scroll)
-                while (!mapaEncontrado && tentativasScroll < MAX_SCROLLS)
-                {
-                    if (TentarEncontrarEClicar($"mapas/{mapaAlvo}", 2))
+                    if (TentarEncontrarEClicar($"mapas/{mapaAlvo}", 1))
                     {
                         Console.WriteLine(">> Mapa selecionado!");
                         mapaEncontrado = true;
@@ -236,27 +223,42 @@ namespace BotBallXPit
                         break;
                     }
 
-                    // Verifica fim da lista
-                    if (LocalizarImagem("mapas/mapabloqueado.png", 0.7) != Point.Empty ||
-                        LocalizarImagem("mapas/vaziovasto.png", 0.7) != Point.Empty)
+                    // Se chegou no fim da lista
+                    if (LocalizarImagem("mapas/vaziovasto.png", 0.7) != Point.Empty)
                     {
-                        Console.WriteLine(">> Fim da lista. Voltando ao topo...");
-                        for (int i = 0; i < 10; i++)
+                        Console.WriteLine(">> Fim da lista de mapas.");
+
+                        // SE NÃO ACHOU O OBRIGATÓRIO (Porque está bloqueado ou erro de leitura)
+                        if (!string.IsNullOrEmpty(_mapaObrigatorio))
                         {
-                            ScrollMouse(50000, pontoDeScroll);
-                            Thread.Sleep(300);
+                            Console.WriteLine($"[ALERTA] O mapa obrigatório '{_mapaObrigatorio}' não foi encontrado (está bloqueado?).");
+                            Console.WriteLine(">> Mudando para modo aleatório para não travar.");
+                            _mapaObrigatorio = ""; // Limpa a obrigação
+
+                            // Volta pro topo e reinicia o loop principal
+                            for (int i = 0; i < 10; i++) { ScrollMouse(5000, pontoDeScroll); Thread.Sleep(150); }
+                            mapaAlvo = SortearMapaAlvo(); // Sorteia um novo alvo pro próximo loop
+                            break; // Sai do loop de scroll para reiniciar o while(!jogoIniciado)
                         }
+
+                        // Se era aleatório, volta pro topo e tenta outro
+                        Console.WriteLine(">> Voltando ao topo...");
+                        for (int i = 0; i < 10; i++) { ScrollMouse(5000, pontoDeScroll); Thread.Sleep(150); }
                         tentativasScroll = 0;
                         mapaAlvo = SortearMapaAlvo();
-                        Console.WriteLine($">> Trocando alvo para: {Path.GetFileNameWithoutExtension(mapaAlvo)}");
                         continue;
                     }
 
-                    // Se não achou e não é o fim, desce a tela
-                    Console.WriteLine(">> Mapa não visível. Rolando para baixo...");
-                    ScrollMouse(-50000, pontoDeScroll); // Valor negativo = Rolar para baixo
-                    Thread.Sleep(500); // Espera o scroll assentar
+                    ScrollMouse(-300, pontoDeScroll);
+                    Thread.Sleep(800);
                     tentativasScroll++;
+                }
+
+                // Se o loop de scroll quebrou porque não achou o obrigatório, 'mapaEncontrado' é false.
+                // O loop while(!jogoIniciado) vai rodar de novo, mas agora com _mapaObrigatorio vazio.
+                if (!mapaEncontrado && string.IsNullOrEmpty(_mapaObrigatorio))
+                {
+                    continue;
                 }
 
                 if (mapaEncontrado)
@@ -264,7 +266,6 @@ namespace BotBallXPit
                     Console.WriteLine(">> Clicando em JOGAR...");
                     if (TentarEncontrarEClicar("botoes/botao_jogar.png", 3))
                     {
-                        // Validação de mapa já concluído
                         Console.WriteLine(">> Verificando aviso de 'Já Concluiu'...");
                         Thread.Sleep(2000);
 
@@ -274,8 +275,7 @@ namespace BotBallXPit
                             if (TentarEncontrarEClicar("botoes/botao_nao.png", 3))
                             {
                                 Thread.Sleep(2000);
-                                // Volta ao topo para nova busca
-                                for (int i = 0; i < 5; i++) { ScrollMouse(500, pontoDeScroll); Thread.Sleep(100); }
+                                _mapaObrigatorio = ""; // Se o obrigatório já estava feito (erro), limpa
                                 continue;
                             }
                         }
@@ -285,154 +285,152 @@ namespace BotBallXPit
                     }
                     else
                     {
-                        Console.WriteLine("[ERRO] Botão JOGAR não encontrado. Tentando outro...");
                         continue;
                     }
                 }
-                else
-                {
-                    Console.WriteLine("[ERRO] Mapa não encontrado. Reiniciando busca...");
-                    for (int i = 0; i < 5; i++) { ScrollMouse(500, pontoDeScroll); Thread.Sleep(100); }
-                }
             }
 
-            // ==============================================================================
-            // FASE FINAL: GERENCIAMENTO DE FIM DE JOGO
-            // ==============================================================================
-            // Aqui o bot entra num loop inteligente que limpa as telas de recompensa
-
+            // --- MONITORAMENTO DA PARTIDA ---
             bool partidaAcabou = false;
-            Console.WriteLine(">> Monitorando a partida e recompensas...");
+            Console.WriteLine(">> Monitorando recompensas...");
 
             while (!partidaAcabou)
             {
-                // 1. Verifica ENGRENAGENS (Botão Uau)
                 if (TentarEncontrarEClicar("botoes/botao_uau.png", 1))
                 {
-                    Console.WriteLine(">> [RECOMPENSA] Engrenagem coletada (Uau)!");
-                    Thread.Sleep(2000); // Espera a próxima tela aparecer
-                    continue; // Reinicia o loop para ver o que vem depois
+                    Console.WriteLine(">> [UAU] Engrenagem!"); Thread.Sleep(5000); continue;
                 }
-
-                // 2. Verifica LEVEL UP (Botão Legal)
-                // Se aparecer 2x, o loop vai pegar na primeira passada e depois na segunda
                 if (TentarEncontrarEClicar("botoes/botao_legal.png", 1))
                 {
-                    Console.WriteLine(">> [LEVEL UP] Personagem evoluiu (Legal)!");
-                    Thread.Sleep(2000);
-                    continue;
+                    Console.WriteLine(">> [LEGAL] Level Up!"); Thread.Sleep(5000); continue;
                 }
 
-                // 3. Verifica VOLTAR BASE (Sinal de Fim Real)
                 Point posVoltar = LocalizarImagem("botoes/botao_voltarbase.png", 0.7);
                 if (posVoltar != Point.Empty)
                 {
-                    Console.WriteLine("--- TODOS OS EVENTOS FINALIZADOS ---");
-                    Console.WriteLine(">> Clicando em Voltar Base...");
+                    Console.WriteLine("--- FIM DE JOGO ---");
                     Clicar(posVoltar.X, posVoltar.Y);
-
-                    partidaAcabou = true; // Sai do loop da partida
-
-                    // Fluxo final pós-partida
-                    Console.WriteLine(">> Carregando a base (10s)...");
+                    partidaAcabou = true;
                     Thread.Sleep(10000);
-
-                    // Verifica se tem algum prêmio final de lobby
-                    if (TentarEncontrarEClicar("botoes/botao_legal.png", 5))
-                        Console.WriteLine(">> Botão Legal (Lobby) clicado.");
-
-                    Console.WriteLine(">> Ciclo finalizado! O bot reiniciará em breve.");
+                    TentarEncontrarEClicar("botoes/botao_legal.png", 5);
                 }
                 else
                 {
-                    // Se não achou nada, espera 5 segundos e olha de novo
-                    // Isso evita fritar o processador e dá o intervalo de "monitoramento"
-                    Console.Write(".");
-                    Thread.Sleep(5000);
+                    Console.Write("."); Thread.Sleep(5000);
                 }
             }
         }
 
-        // --- FUNÇÕES DE LÓGICA ALEATÓRIA ---
+        // --- NOVA LÓGICA DE ESCOLHA COM ALTA PRECISÃO ---
+        static bool EscolherPersonagemPorProgresso()
+        {
+            string[] ordemMapas = new string[] {
+                "patioosseo",
+                "margensnevadas",
+                "desertoliminar",
+                "florestafungica",
+                "savanasangrenta",
+                "profundezasardentes",
+                "portoescelestiais",
+                "vaziovasto"
+            };
+
+            // Nomes exatos dos arquivos na pasta conclusoes
+            string[] arquivosCheck = new string[] {
+                "1patioosseoconc.png",
+                "2margensnevadasconc.png",
+                "3desertoliminarconc.png",
+                "4florestafungicaconc.png",
+                "5savanasangrentaconc.png",
+                "6profundezasardentesconc.png",
+                "7portoescelestiaisconc.png",
+                "8vaziovastoconc.png"
+            };
+
+            try
+            {
+                string pastaPersonagens = Path.Combine(BaseDir, "Images", "personagens");
+                var arquivosChar = Directory.GetFiles(pastaPersonagens, "*.png");
+
+                foreach (var arquivoChar in arquivosChar)
+                {
+                    string nomeArquivo = Path.GetFileName(arquivoChar);
+                    if (nomeArquivo.ToLower().Contains("radical") ||
+                        nomeArquivo.ToLower().Contains("header") ||
+                        nomeArquivo.ToLower().Contains("arrependida") ||
+                        nomeArquivo.ToLower().Contains("menu")) continue;
+
+                    // 1. Acha o personagem e clica
+                    Point pos = LocalizarImagem($"personagens/{nomeArquivo}", 0.85);
+                    if (pos != Point.Empty)
+                    {
+                        Console.WriteLine($"Analizando personagem: {nomeArquivo}");
+                        Clicar(pos.X, pos.Y);
+                        Thread.Sleep(1500);
+
+                        // 2. Verifica os checks de 1 a 8
+                        for (int i = 0; i < 8; i++)
+                        {
+                            // AQUI ESTÁ O SEGREDO: Confiança 0.95
+                            // Se faltar o check verde, 0.95 vai falhar, retornando FALSE.
+                            // Isso garante que "florestafungica" (sem check) retorne FALSE.
+                            bool completou = LocalizarImagem($"conclusoes/{arquivosCheck[i]}", 0.95) != Point.Empty;
+
+                            if (!completou)
+                            {
+                                Console.WriteLine($"[ALVO ENCONTRADO] Falta completar: {ordemMapas[i]}");
+                                _mapaObrigatorio = ordemMapas[i];
+                                return true;
+                            }
+                        }
+
+                        Console.WriteLine("Este personagem completou tudo. Próximo...");
+                    }
+                }
+            }
+            catch (Exception ex) { Console.WriteLine($"Erro analise: {ex.Message}"); }
+
+            Console.WriteLine("[AVISO] Nenhum progresso pendente achado. Aleatório.");
+            return EscolherPersonagemAleatorio();
+        }
+
+        // --- MÉTODOS AUXILIARES (IGUAIS) ---
+        static bool EscolherPersonagemAleatorio()
+        {
+            try
+            {
+                string pastaPersonagens = Path.Combine(BaseDir, "Images", "personagens");
+                var arquivos = Directory.GetFiles(pastaPersonagens, "*.png");
+                Random rng = new Random();
+                var arquivosEmbaralhados = arquivos.OrderBy(a => rng.Next()).ToList();
+                foreach (var arquivo in arquivosEmbaralhados)
+                {
+                    string nomeArquivo = Path.GetFileName(arquivo);
+                    if (nomeArquivo.ToLower().Contains("radical") || nomeArquivo.ToLower().Contains("header") || nomeArquivo.ToLower().Contains("menu")) continue;
+                    Point pos = LocalizarImagem($"personagens/{nomeArquivo}", 0.8);
+                    if (pos != Point.Empty) { Clicar(pos.X, pos.Y); return true; }
+                }
+            }
+            catch { }
+            return false;
+        }
 
         static string SortearMapaAlvo()
         {
             try
             {
                 string pastaMapas = Path.Combine(BaseDir, "Images", "mapas");
-                if (!Directory.Exists(pastaMapas)) return "";
-
-                var arquivos = Directory.GetFiles(pastaMapas, "*.*")
-                                       .Where(s => s.EndsWith(".png") || s.EndsWith(".jpg"))
-                                       .ToList();
-
+                var arquivos = Directory.GetFiles(pastaMapas, "*.png");
                 Random rng = new Random();
-
-                // Filtra arquivos que NÃO são mapas jogáveis
-                var mapasValidos = arquivos.Where(f =>
-                {
+                var mapasValidos = arquivos.Where(f => {
                     string nome = Path.GetFileName(f).ToLower();
-                    // Ignora o título, setas e os mapas de fim de lista
-                    return !nome.Contains("novo_jogo") &&
-                           !nome.Contains("bloqueado") &&
-                           !nome.Contains("vaziovasto") &&
-                           !nome.Contains("seta");
+                    return !nome.Contains("novo_jogo") && !nome.Contains("bloqueado") && !nome.Contains("vaziovasto") && !nome.Contains("seta");
                 }).ToList();
-
-                if (mapasValidos.Count > 0)
-                {
-                    // Retorna apenas o nome do arquivo (ex: "florestafungica.png")
-                    return Path.GetFileName(mapasValidos[rng.Next(mapasValidos.Count)]);
-                }
+                if (mapasValidos.Count > 0) return Path.GetFileName(mapasValidos[rng.Next(mapasValidos.Count)]);
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Erro ao sortear mapa: {ex.Message}");
-            }
+            catch { }
             return "";
         }
-
-        static bool EscolherPersonagemAleatorio()
-        {
-            try
-            {
-                string pastaPersonagens = Path.Combine(BaseDir, "Images", "personagens"); // Pasta com 'n'
-                if (!Directory.Exists(pastaPersonagens)) return false;
-
-                var arquivos = Directory.GetFiles(pastaPersonagens, "*.*")
-                                       .Where(s => s.EndsWith(".png") || s.EndsWith(".jpg"))
-                                       .ToList();
-
-                Random rng = new Random();
-                var arquivosEmbaralhados = arquivos.OrderBy(a => rng.Next()).ToList();
-
-                foreach (var arquivo in arquivosEmbaralhados)
-                {
-                    string nomeArquivo = Path.GetFileName(arquivo);
-
-                    // Ignora arquivos de controle (header, menu, radical)
-                    if (nomeArquivo.ToLower().Contains("radical") ||
-                        nomeArquivo.ToLower().Contains("header") ||
-                        nomeArquivo.ToLower().Contains("menu"))
-                        continue;
-
-                    Point pos = LocalizarImagem($"personagens/{nomeArquivo}", 0.8);
-                    if (pos != Point.Empty)
-                    {
-                        Console.WriteLine($"Parceiro escolhido: {nomeArquivo}");
-                        Clicar(pos.X, pos.Y);
-                        return true;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Erro ao escolher aleatório: {ex.Message}");
-            }
-            return false;
-        }
-
-        // --- FUNÇÕES UTILITÁRIAS (Core do Bot) ---
 
         static bool TentarEncontrarEClicar(string caminhoRelativo, int timeoutSegundos)
         {
@@ -440,54 +438,34 @@ namespace BotBallXPit
             while (tentativas < timeoutSegundos)
             {
                 Point pos = LocalizarImagem(caminhoRelativo, 0.7);
-                if (pos != Point.Empty)
-                {
-                    Clicar(pos.X, pos.Y);
-                    return true;
-                }
-                Thread.Sleep(1000);
-                tentativas++;
+                if (pos != Point.Empty) { Clicar(pos.X, pos.Y); return true; }
+                Thread.Sleep(1000); tentativas++;
             }
             return false;
         }
 
         static bool AguardarImagem(string caminhoRelativo, int timeoutSegundos)
         {
-            int tentativas = 0;
-            while (tentativas < timeoutSegundos)
+            int t = 0;
+            while (t < timeoutSegundos)
             {
-                if (LocalizarImagem(caminhoRelativo, 0.7) != Point.Empty)
-                    return true;
-
-                Console.Write("."); // Feedback visual de espera
-                Thread.Sleep(1000);
-                tentativas++;
+                if (LocalizarImagem(caminhoRelativo, 0.7) != Point.Empty) return true;
+                Console.Write("."); Thread.Sleep(1000); t++;
             }
-            Console.WriteLine();
             return false;
         }
 
         static Point LocalizarImagem(string caminhoRelativo, double confiancaMinima)
         {
-            // Corrige barras invertidas/normais para o Windows
-            caminhoRelativo = caminhoRelativo.Replace('/', Path.DirectorySeparatorChar)
-                                             .Replace('\\', Path.DirectorySeparatorChar);
-
+            caminhoRelativo = caminhoRelativo.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
             string caminhoCompleto = Path.Combine(BaseDir, "Images", caminhoRelativo);
 
             if (!File.Exists(caminhoCompleto))
             {
-                // Tenta achar na raiz da pasta Images caso o subdiretório falhe
-                string nomeArquivo = Path.GetFileName(caminhoCompleto);
-                string caminhoAlternativo = Path.Combine(BaseDir, "Images", nomeArquivo);
-
-                if (File.Exists(caminhoAlternativo))
-                    caminhoCompleto = caminhoAlternativo;
-                else
-                {
-                    Console.WriteLine($"[DEBUG] Arquivo não encontrado: {caminhoCompleto}");
-                    return Point.Empty;
-                }
+                string nome = Path.GetFileName(caminhoCompleto);
+                string alt = Path.Combine(BaseDir, "Images", nome);
+                if (File.Exists(alt)) caminhoCompleto = alt;
+                else return Point.Empty;
             }
 
             using (Bitmap printScreen = CapturarTela())
@@ -497,37 +475,18 @@ namespace BotBallXPit
             using (Mat resultado = new Mat())
             {
                 if (matTemplate.Empty()) return Point.Empty;
+                if (matTelaBruta.Channels() == 4) Cv2.CvtColor(matTelaBruta, matTela3Canais, ColorConversionCodes.BGRA2BGR);
+                else matTelaBruta.CopyTo(matTela3Canais);
 
-                // Converte para 3 canais (BGR) se a tela tiver Alpha
-                if (matTelaBruta.Channels() == 4)
-                    Cv2.CvtColor(matTelaBruta, matTela3Canais, ColorConversionCodes.BGRA2BGR);
-                else
-                    matTelaBruta.CopyTo(matTela3Canais);
-
-                // Evita crash se a imagem for maior que a tela
-                if (matTela3Canais.Width < matTemplate.Width || matTela3Canais.Height < matTemplate.Height)
-                    return Point.Empty;
+                if (matTela3Canais.Width < matTemplate.Width || matTela3Canais.Height < matTemplate.Height) return Point.Empty;
 
                 Cv2.MatchTemplate(matTela3Canais, matTemplate, resultado, TemplateMatchModes.CCoeffNormed);
-
                 double minVal, maxVal;
                 OpenCvSharp.Point minLoc, maxLoc;
                 Cv2.MinMaxLoc(resultado, out minVal, out maxVal, out minLoc, out maxLoc);
 
-                // Feedback para ajudar a ajustar recortes
-                if (maxVal > 0.2 && maxVal < confiancaMinima)
-                {
-                    // Descomente a linha abaixo se quiser ver "quase acertos"
-                    // Console.WriteLine($"[DEBUG] '{Path.GetFileName(caminhoRelativo)}': {maxVal:P0} (Min: {confiancaMinima:P0})");
-                }
-
                 if (maxVal >= confiancaMinima)
-                {
-                    return new Point(
-                        maxLoc.X + (matTemplate.Width / 2),
-                        maxLoc.Y + (matTemplate.Height / 2)
-                    );
-                }
+                    return new Point(maxLoc.X + (matTemplate.Width / 2), maxLoc.Y + (matTemplate.Height / 2));
             }
             return Point.Empty;
         }
@@ -536,38 +495,27 @@ namespace BotBallXPit
         {
             var bounds = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
             Bitmap bitmap = new Bitmap(bounds.Width, bounds.Height);
-            using (Graphics g = Graphics.FromImage(bitmap))
-            {
-                g.CopyFromScreen(Point.Empty, Point.Empty, bounds.Size);
-            }
+            using (Graphics g = Graphics.FromImage(bitmap)) { g.CopyFromScreen(Point.Empty, Point.Empty, bounds.Size); }
             return bitmap;
         }
 
         static void Clicar(int x, int y)
         {
-            SetCursorPos(x, y);
-            Thread.Sleep(100);
-            mouse_event(MOUSEEVENTF_LEFTDOWN, x, y, 0, 0);
-            Thread.Sleep(50);
+            SetCursorPos(x, y); Thread.Sleep(100);
+            mouse_event(MOUSEEVENTF_LEFTDOWN, x, y, 0, 0); Thread.Sleep(50);
             mouse_event(MOUSEEVENTF_LEFTUP, x, y, 0, 0);
         }
 
         private static void SegurarBotaoDireito(int x, int y, int tempoMs)
         {
-            SetCursorPos(x, y);
-            Thread.Sleep(100);
-            mouse_event(MOUSEEVENTF_RIGHTDOWN, x, y, 0, 0);
-            Thread.Sleep(tempoMs);
+            SetCursorPos(x, y); Thread.Sleep(100);
+            mouse_event(MOUSEEVENTF_RIGHTDOWN, x, y, 0, 0); Thread.Sleep(tempoMs);
             mouse_event(MOUSEEVENTF_RIGHTUP, x, y, 0, 0);
         }
 
         static void ScrollMouse(int quantidade, Point alvo)
         {
-            // Move o mouse para onde a imagem "scroll_lateral" está
-            SetCursorPos(alvo.X, alvo.Y);
-            Thread.Sleep(100);
-
-            // Rola a roda
+            SetCursorPos(alvo.X, alvo.Y); Thread.Sleep(100);
             mouse_event(MOUSEEVENTF_WHEEL, 0, 0, quantidade, 0);
         }
     }
