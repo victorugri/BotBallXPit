@@ -15,7 +15,6 @@ namespace BotBallXPit
 {
     class Program
     {
-        // --- Importações do Mouse (Win32 API) ---
         [DllImport("user32.dll")]
         static extern void mouse_event(int dwFlags, int dx, int dy, int dwData, int dwExtraInfo);
 
@@ -29,13 +28,11 @@ namespace BotBallXPit
         private const int MOUSEEVENTF_WHEEL = 0x0800;
 
         static readonly string BaseDir = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\"));
-
-        // Variável Global para forçar o mapa que falta ser concluído
         static string _mapaObrigatorio = "";
 
         static void Main(string[] args)
         {
-            Console.WriteLine("=== BOT BALL X PIT - V7 PROGRESSÃO (Correção de Threshold) ===");
+            Console.WriteLine("=== BOT BALL X PIT - V9 CORREÇÃO DE LÓGICA CONC/INCONC ===");
             Console.WriteLine($"Diretório base: {BaseDir}");
             Console.WriteLine("Pressione Ctrl+C para parar.");
             Console.WriteLine("------------------------------------------------");
@@ -56,12 +53,8 @@ namespace BotBallXPit
 
         static void ExecutarRotinaCompleta()
         {
-            // Reseta a memória do mapa a cada ciclo novo
             _mapaObrigatorio = "";
 
-            // ==============================================================================
-            // PASSO 1: COLHEITA
-            // ==============================================================================
             Point locColher = LocalizarImagem("botoes/botao_colher.png", 0.7);
 
             if (locColher != Point.Empty)
@@ -75,7 +68,7 @@ namespace BotBallXPit
                 Clicar(locColher.X, locColher.Y);
                 Thread.Sleep(3000);
 
-                Console.WriteLine(">> Acelerando (Segurando botão direito)...");
+                Console.WriteLine(">> Acelerando...");
                 SegurarBotaoDireito(locColher.X, locColher.Y, 10000);
 
                 Console.WriteLine(">> Aguardando Recompensa...");
@@ -87,9 +80,6 @@ namespace BotBallXPit
                 Thread.Sleep(3000);
             }
 
-            // ==============================================================================
-            // PASSO 2: ENTRAR NA BATALHA
-            // ==============================================================================
             if (TentarEncontrarEClicar("botoes/botao_batalha.png", 3))
             {
                 Console.WriteLine("Clicou em Batalha. Aguardando menu de personagens...");
@@ -115,9 +105,7 @@ namespace BotBallXPit
         {
             Console.WriteLine("--- MONTANDO O TIME ---");
 
-            // 1. Selecionar o RADICAL (Obrigatório)
             Console.WriteLine(">> Procurando Radical...");
-            // Usando radical2.png conforme seu último código
             if (TentarEncontrarEClicar("personagens/radical2.png", 5))
             {
                 Thread.Sleep(1000);
@@ -131,7 +119,6 @@ namespace BotBallXPit
                 return;
             }
 
-            // 2. Novo Parceiro
             Console.WriteLine(">> Clicando no slot vazio...");
             if (!TentarEncontrarEClicar("botoes/novo_parceiro.png", 5))
             {
@@ -140,7 +127,6 @@ namespace BotBallXPit
             }
             Thread.Sleep(2000);
 
-            // 3. Selecionar POR PROGRESSO
             Console.WriteLine(">> Analisando progresso dos personagens...");
             if (EscolherPersonagemPorProgresso())
             {
@@ -151,7 +137,6 @@ namespace BotBallXPit
                 Console.WriteLine(">> Clicando em CONTINUAR...");
                 if (TentarEncontrarEClicar("botoes/botao_continuar.png", 5))
                 {
-                    // Sucesso, vai para mapas
                 }
             }
             else
@@ -164,7 +149,6 @@ namespace BotBallXPit
         {
             Console.WriteLine("--- SELEÇÃO DE MAPA ---");
 
-            // 1. Validar NOVO JOGO+
             if (LocalizarImagem("mapas/Novo_Jogo_+.png", 0.7) == Point.Empty)
             {
                 Console.WriteLine(">> Não estamos no Novo Jogo+. Clicando na seta direita...");
@@ -178,7 +162,6 @@ namespace BotBallXPit
                 Console.WriteLine(">> Já estamos no Novo Jogo+.");
             }
 
-            // Define ponto de scroll
             Point pontoDeScroll = LocalizarImagem("botoes/scroll_lateral.png", 0.7);
             if (pontoDeScroll == Point.Empty)
             {
@@ -192,7 +175,6 @@ namespace BotBallXPit
             {
                 string mapaAlvo = "";
 
-                // --- LÓGICA DE ALVO ---
                 if (!string.IsNullOrEmpty(_mapaObrigatorio))
                 {
                     Console.WriteLine($">> [MODO PROGRESSÃO] O personagem precisa do mapa: {_mapaObrigatorio}");
@@ -209,10 +191,8 @@ namespace BotBallXPit
                 bool mapaEncontrado = false;
                 int tentativasScroll = 0;
 
-                // Vai pro topo antes de começar (garantia)
                 for (int i = 0; i < 5; i++) { ScrollMouse(5000, pontoDeScroll); Thread.Sleep(100); }
 
-                // Loop de busca
                 while (!mapaEncontrado && tentativasScroll < 20)
                 {
                     if (TentarEncontrarEClicar($"mapas/{mapaAlvo}", 1))
@@ -223,25 +203,21 @@ namespace BotBallXPit
                         break;
                     }
 
-                    // Se chegou no fim da lista
                     if (LocalizarImagem("mapas/vaziovasto.png", 0.7) != Point.Empty)
                     {
                         Console.WriteLine(">> Fim da lista de mapas.");
 
-                        // SE NÃO ACHOU O OBRIGATÓRIO (Porque está bloqueado ou erro de leitura)
                         if (!string.IsNullOrEmpty(_mapaObrigatorio))
                         {
-                            Console.WriteLine($"[ALERTA] O mapa obrigatório '{_mapaObrigatorio}' não foi encontrado (está bloqueado?).");
-                            Console.WriteLine(">> Mudando para modo aleatório para não travar.");
-                            _mapaObrigatorio = ""; // Limpa a obrigação
+                            Console.WriteLine($"[ALERTA] O mapa obrigatório '{_mapaObrigatorio}' não foi encontrado.");
+                            Console.WriteLine(">> Mudando para modo aleatório.");
+                            _mapaObrigatorio = "";
 
-                            // Volta pro topo e reinicia o loop principal
                             for (int i = 0; i < 10; i++) { ScrollMouse(5000, pontoDeScroll); Thread.Sleep(150); }
-                            mapaAlvo = SortearMapaAlvo(); // Sorteia um novo alvo pro próximo loop
-                            break; // Sai do loop de scroll para reiniciar o while(!jogoIniciado)
+                            mapaAlvo = SortearMapaAlvo();
+                            break;
                         }
 
-                        // Se era aleatório, volta pro topo e tenta outro
                         Console.WriteLine(">> Voltando ao topo...");
                         for (int i = 0; i < 10; i++) { ScrollMouse(5000, pontoDeScroll); Thread.Sleep(150); }
                         tentativasScroll = 0;
@@ -254,8 +230,6 @@ namespace BotBallXPit
                     tentativasScroll++;
                 }
 
-                // Se o loop de scroll quebrou porque não achou o obrigatório, 'mapaEncontrado' é false.
-                // O loop while(!jogoIniciado) vai rodar de novo, mas agora com _mapaObrigatorio vazio.
                 if (!mapaEncontrado && string.IsNullOrEmpty(_mapaObrigatorio))
                 {
                     continue;
@@ -275,7 +249,7 @@ namespace BotBallXPit
                             if (TentarEncontrarEClicar("botoes/botao_nao.png", 3))
                             {
                                 Thread.Sleep(2000);
-                                _mapaObrigatorio = ""; // Se o obrigatório já estava feito (erro), limpa
+                                _mapaObrigatorio = "";
                                 continue;
                             }
                         }
@@ -290,19 +264,36 @@ namespace BotBallXPit
                 }
             }
 
-            // --- MONITORAMENTO DA PARTIDA ---
             bool partidaAcabou = false;
             Console.WriteLine(">> Monitorando recompensas...");
 
+            int ciclosSemAcharNada = 0;
             while (!partidaAcabou)
             {
+                bool achouAlgo = false;
+
                 if (TentarEncontrarEClicar("botoes/botao_uau.png", 1))
                 {
-                    Console.WriteLine(">> [UAU] Engrenagem!"); Thread.Sleep(5000); continue;
+                    Console.WriteLine(">> [UAU] Engrenagem!");
+                    Thread.Sleep(5000);
+                    achouAlgo = true;
+                    continue;
                 }
+
                 if (TentarEncontrarEClicar("botoes/botao_legal.png", 1))
                 {
-                    Console.WriteLine(">> [LEGAL] Level Up!"); Thread.Sleep(5000); continue;
+                    Console.WriteLine(">> [LEGAL] Level Up!");
+                    Thread.Sleep(5000);
+                    achouAlgo = true;
+                    continue;
+                }
+
+                if (TentarEncontrarEClicar("botoes/botao_legal.png", 1))
+                {
+                    Console.WriteLine(">> [LEGAL]... OUTRO Level Up!");
+                    Thread.Sleep(5000);
+                    achouAlgo = true;
+                    continue;
                 }
 
                 Point posVoltar = LocalizarImagem("botoes/botao_voltarbase.png", 0.7);
@@ -311,20 +302,28 @@ namespace BotBallXPit
                     Console.WriteLine("--- FIM DE JOGO ---");
                     Clicar(posVoltar.X, posVoltar.Y);
                     partidaAcabou = true;
-                    Thread.Sleep(10000);
-                    TentarEncontrarEClicar("botoes/botao_legal.png", 5);
+
+                    Console.WriteLine(">> Voltando para a base...");
+                    Thread.Sleep(8000);
+
+                    TentarEncontrarEClicar("botoes/botao_legal.png", 3);
+                    break;
                 }
-                else
+
+                if (!achouAlgo)
                 {
-                    Console.Write("."); Thread.Sleep(5000);
+                    Console.Write(".");
+                    Thread.Sleep(1000);
+
+                    ciclosSemAcharNada++;
+                    if (ciclosSemAcharNada % 30 == 0) Console.WriteLine();
                 }
             }
         }
 
-        // --- NOVA LÓGICA DE ESCOLHA COM ALTA PRECISÃO ---
         static bool EscolherPersonagemPorProgresso()
         {
-            string[] ordemMapas = new string[] {
+            string[] nomesMapas = new string[] {
                 "patioosseo",
                 "margensnevadas",
                 "desertoliminar",
@@ -335,8 +334,7 @@ namespace BotBallXPit
                 "vaziovasto"
             };
 
-            // Nomes exatos dos arquivos na pasta conclusoes
-            string[] arquivosCheck = new string[] {
+            string[] arquivosConc = new string[] {
                 "1patioosseoconc.png",
                 "2margensnevadasconc.png",
                 "3desertoliminarconc.png",
@@ -345,6 +343,17 @@ namespace BotBallXPit
                 "6profundezasardentesconc.png",
                 "7portoescelestiaisconc.png",
                 "8vaziovastoconc.png"
+            };
+
+            string[] arquivosInconc = new string[] {
+                "",
+                "2margensnevadasINCONC.png",
+                "3desertoliminarINCONC.png",
+                "4florestafungicaINCONC.png",
+                "5savanasangrentaINCONC.png",
+                "6profundezasardentesINCONC.png",
+                "7portoescelestiaisINCONC.png",
+                "8vaziovastoINCONC.png"
             };
 
             try
@@ -357,10 +366,10 @@ namespace BotBallXPit
                     string nomeArquivo = Path.GetFileName(arquivoChar);
                     if (nomeArquivo.ToLower().Contains("radical") ||
                         nomeArquivo.ToLower().Contains("header") ||
-                        nomeArquivo.ToLower().Contains("arrependida") ||
-                        nomeArquivo.ToLower().Contains("menu")) continue;
+                        nomeArquivo.ToLower().Contains("menu") ||
+                        nomeArquivo.ToLower().Contains("nidificadora") ||
+                        nomeArquivo.ToLower().Contains("arrependida")) continue;
 
-                    // 1. Acha o personagem e clica
                     Point pos = LocalizarImagem($"personagens/{nomeArquivo}", 0.85);
                     if (pos != Point.Empty)
                     {
@@ -368,23 +377,44 @@ namespace BotBallXPit
                         Clicar(pos.X, pos.Y);
                         Thread.Sleep(1500);
 
-                        // 2. Verifica os checks de 1 a 8
                         for (int i = 0; i < 8; i++)
                         {
-                            // AQUI ESTÁ O SEGREDO: Confiança 0.95
-                            // Se faltar o check verde, 0.95 vai falhar, retornando FALSE.
-                            // Isso garante que "florestafungica" (sem check) retorne FALSE.
-                            bool completou = LocalizarImagem($"conclusoes/{arquivosCheck[i]}", 0.95) != Point.Empty;
-
-                            if (!completou)
+                            // LÓGICA CORRIGIDA:
+                            // 1. Verifica SE ESTÁ CONCLUÍDO (Check Verde).
+                            //    Se SIM, continue para o próximo (não importa se parece incompleto).
+                            bool estaCompleto = LocalizarImagem($"conclusoes/{arquivosConc[i]}", 0.95) != Point.Empty;
+                            if (estaCompleto)
                             {
-                                Console.WriteLine($"[ALVO ENCONTRADO] Falta completar: {ordemMapas[i]}");
-                                _mapaObrigatorio = ordemMapas[i];
+                                continue;
+                            }
+
+                            // 2. Se NÃO está concluído, verifica se está disponível (INCONC).
+                            if (i > 0) // Mapa 1 não tem inconc, assume que se não tá completo, tá pendente
+                            {
+                                bool estaIncompleto = LocalizarImagem($"conclusoes/{arquivosInconc[i]}", 0.8) != Point.Empty;
+                                if (estaIncompleto)
+                                {
+                                    Console.WriteLine($"[ALVO ENCONTRADO] Falta completar: {nomesMapas[i]}");
+                                    _mapaObrigatorio = nomesMapas[i];
+                                    return true;
+                                }
+                                else
+                                {
+                                    // Se não está completo E não está "incompleto", então está bloqueado/trancado.
+                                    // Para de checar este personagem.
+                                    break;
+                                }
+                            }
+                            else
+                            {
+                                // Lógica para o primeiro mapa (Patio Osseo) se não estiver completo
+                                Console.WriteLine($"[ALVO ENCONTRADO] Falta completar: {nomesMapas[i]}");
+                                _mapaObrigatorio = nomesMapas[i];
                                 return true;
                             }
                         }
 
-                        Console.WriteLine("Este personagem completou tudo. Próximo...");
+                        Console.WriteLine("Este personagem já completou tudo disponivel. Próximo...");
                     }
                 }
             }
@@ -394,7 +424,6 @@ namespace BotBallXPit
             return EscolherPersonagemAleatorio();
         }
 
-        // --- MÉTODOS AUXILIARES (IGUAIS) ---
         static bool EscolherPersonagemAleatorio()
         {
             try
