@@ -368,6 +368,7 @@ namespace BotBallXPit
                         nomeArquivo.ToLower().Contains("header") ||
                         nomeArquivo.ToLower().Contains("menu") ||
                         nomeArquivo.ToLower().Contains("nidificadora") ||
+                        nomeArquivo.ToLower().Contains("pensador") ||
                         nomeArquivo.ToLower().Contains("arrependida")) continue;
 
                     Point pos = LocalizarImagem($"personagens/{nomeArquivo}", 0.85);
